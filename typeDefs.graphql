@@ -106,6 +106,10 @@ input PostPhotoInput {
     (optional) A brief description of the photo
     """
     description: String
+    """
+    The file of a Photo which has uploaded from client
+    """
+    file: Upload!
 }
 
 """
@@ -220,4 +224,12 @@ type Mutation {
         """
         githubLogin: ID!
     ): AuthPayload!
+}
+
+"""
+A root type showing all the subscriptions (SUBSCRIBE)
+"""
+type Subscription {
+    newPhoto: Photo!
+    newUser: User!
 }

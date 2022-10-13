@@ -1,4 +1,4 @@
-const { authorizeWithGithub } = require('../lib');
+const { authorizeWithGithub, uploadStream } = require('../lib');
 const fetch = require('node-fetch');
 const { ObjectID } = require('mongodb');
 
@@ -16,6 +16,15 @@ module.exports = {
 
         const { insertedIds } = await db.collection('photos').insert(newPhoto);
         newPhoto.id = insertedIds[0];
+
+        const toPath = path.join(__dirname, '..', 'assets', 'photos', `${newPhoto.id}.jpg`)
+        const { stream } = await args.input.file;
+
+        await uploadStream(stream, toPath);
+
+        // pubsub 인스턴스를 통해 publish 한다.
+        // 'photo-added'를 키로 해놓은 subscription이 실행된다.
+        pubsub.publish('photo-added', { newPhoto });
 
         return newPhoto;
     },
@@ -52,14 +61,12 @@ module.exports = {
             avatar: avatar_url
         };
 
-        await db
+        const { ops:[user], result } = await db
             .collection('users')
-            .replaceOne({ githubLogin: login }, latestUserInfo, { upsert: true });
+            .replaceOne({ githubLogin: login }, latestUserInfo, { upsert: true })
 
-        // 방금 변경한 항목 데이터를 가져온다.
-        const user = await db
-            .collection('users')
-            .findOne({ githubLogin: login });
+        // 정상적으로 저장되었다면 'user-added'를 publish
+        result.upserted && pubsub.publish('user-added', { newUser: user })
 
         return { user, token: access_token };
     },
@@ -76,6 +83,14 @@ module.exports = {
         }));
 
         await db.collection('users').insert(users);
+        var newUsers = await db.collection('users')
+            .find()
+            .sort({ _id: -1 })
+            .limit(count)
+            .toArray();
+        
+        // 추가된 user 수 만큼 'user-added' publish
+        newUsers.forEach(newUser => pubsub.publish('user-added', {newUser}));
 
         return users;
     },

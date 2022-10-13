@@ -37,8 +37,22 @@ const authorizeWithGithub = async credentials => {
     };
 }
 
+const uploadStream = (stream, path) => 
+    new Promise((resolve, reject) => {
+        stream.on('error', error => {
+            // 에러 처리
+            if (stream.truncated) {
+                fs.unlinkSync(path);
+            }
+            reject(error);
+        }).on('end', resolve)
+        // 전달받은 stream을 지정된 path에 쓴다.
+        .pipe(fs.createWriteStream(path));
+    })
+
 module.exports = { 
     findBy, 
     authorizeWithGithub, 
-    generateFakeUsers
+    generateFakeUsers,
+    uploadStream
 };
