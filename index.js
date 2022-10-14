@@ -35,6 +35,7 @@ async function start() {
     const server = new ApolloServer({
         typeDefs,
         resolvers,
+        // 해당 프로퍼티 활성화를 통해 GraphQL 서비스를 모니터링 할 수 있다.
         engine: true,
         // 쿼리 응답 유효성 규칙 등록
         validationRules: [
